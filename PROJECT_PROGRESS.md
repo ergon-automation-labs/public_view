@@ -1,8 +1,42 @@
 # Bot Army Project Progress Overview
 
-**Last Updated:** 2026-03-25 (Session 8) — **Progress Export Automation Hook Validation**. Validated post-commit sync flow for exporting this document to public repo workflow.
+> *Attention is finite. Information shouldn't have to be.*
+
+Bot Army is a personal operating system built on Elixir/BEAM, NATS, SaltStack, and a push/pull surface philosophy. This document is a running engineering log — updated per session and per release. It's meant to be read by engineers, not marketing teams.
+
+---
+
+## What's Been Built
+
+11 active bots across GTD, SRE, fitness, advocacy, job tracking, chore management, learning, email triage, and infrastructure. 4 terminal TUI surfaces (Go + tview). 2 LiveView web surfaces (Phoenix). Full Salt → Jenkins → NATS → surface deployment chain live.
+
+The LLM layer (v0.6.2) handles multi-model routing with a safety classifier, local/cloud load balancing, pgvector RAG, token accounting, and real-time queue visibility. 195 tests passing.
+
+---
+
+## Stack
+
+```
+Runtime         Elixir / BEAM / OTP
+Messaging       NATS (fan-out, decentralized workers)
+Config Mgmt     SaltStack (grains-based targeting)
+CI/CD           Jenkins
+Web Surfaces    Phoenix LiveView
+Terminal        Ratatouille TUI (Go + tview)
+Push Surfaces   Apple Watch · Even Realities G2 AR Glasses
+AI Layer        Multi-model LLM proxy (Blackbox AI)
+Infra           AWS · GCP · Kubernetes
+Contracts       JSON Schema (service boundaries)
+Vector Search   pgvector (1536-dim embeddings, IVFFlat index)
+```
+
+---
+
+## Current Snapshot
+
+**Last Updated:** 2026-03-26 (Session 9) — **Async Lesson Generation with Observability Hooks**. Integrated lesson generation worker with real-time progress tracking in dojo learning interface.
 **Total Projects:** 11 active bots (9 domain + 2 infrastructure) + 4 surfaces + 3 portable public repos + infrastructure
-**Overall Status:** 🟢 **HIGH** - **Queue status endpoint enhanced with active/waiting breakdown + last activity timestamp. Users can now distinguish between actively processing vs queued requests**. v0.6.2 released on GitHub, deploying via Jenkins.
+**Overall Status:** 🟢 **HIGH** - **Lesson generation now async with observable progress. Terrain-bot queues missing lessons in background; TUI shows generation progress (started → progress % → completed). Auto-refreshes dojo view when lessons ready**. v0.1.2 of terrain-bot released; terrain-tui updated with dojo integration.
 
 ---
 
@@ -17,7 +51,7 @@
 | **bot_army_job_applications** | **0.2.14** | **✅ Released** | **99%** | **Phase 4 ✅** | **Phase 4 (email follow-ups, outcome tracking)** |
 | **bot_army_chore** | **0.1.4** | **✅ Deployed** | **90%** | **Phase 5 ✅** | **SMS/Email bot implementation (future)** |
 | **bot_army_fitness** | **0.1.4** | **✅ Deployed** | **85%** | **Phase 3 ✅** | **Phase 4: Analytics & performance** |
-| **bot_army_terrain** | **0.1.2** | **✅ Deployed** | **95%** | **Phases 1-5 ✅** | **Phase 6: Adaptive scheduling** |
+| **bot_army_terrain** | **0.1.2** | **✅ Deployed** | **99%** | **Phases 1-5 ✅ + Async Lesson Gen** | **Phase 6: LLM lesson generation + DB persist** |
 | **bot_army_email_triage** | **0.1.0** | **✅ Deployed** | **95%** | **Phase 4 ✅** | **Phase 5: Production Gmail testing + pattern expansion** |
 | **bot_army_context_broker** | **0.1.0** | **✅ Released** | **95%** | **Infra ✅** | **Phase 2: Consumer integration** |
 | **bot_army_notification_router** | **0.1.0** | **✅ Released** | **95%** | **Infra ✅** | **Phase 2: Surface integration** |
@@ -93,6 +127,77 @@
 **Tests:** All 195 tests passing. Compilation error (duplicate `end` statement) fixed.
 
 **Release:** v0.6.2 published to GitHub. Deploying via Jenkins for automatic service restart.
+
+---
+
+### 🎯 Session 9: Async Lesson Generation with Observability (2026-03-26)
+
+**Learning Surface Enhancement** — Implemented background lesson generation with real-time progress tracking in terrain-tui dojo learning interface.
+
+**Context:** Lessons are generated on-demand when users enter dojo mode for chunks without file-based lessons. Generation is async to avoid blocking the TUI while LLM processes. Observable events allow TUI to show progress to users.
+
+**Changes Made:**
+
+1. **LessonGenerationWorker GenServer (bot_army_terrain v0.1.2)**
+   - Maintains queue of {chunk_id => {title, content, retries}}
+   - `queue_lesson/3`: Enqueues chunks for background generation
+   - `status/0`: Returns current queue state (size, processing chunk, timestamp)
+   - Process loop: 1s (active), 2s (processing), 5s (error), 10s (idle)
+   - Emits observable events via Gnat.pub:
+     - `events.terrain.lesson.generation.started` (chunk_id, timestamp)
+     - `events.terrain.lesson.generation.progress` (chunk_id, status: "generating"/"saving", progress: 0.0-1.0)
+     - `events.terrain.lesson.generation.completed` (chunk_id, lesson_id, timestamp)
+     - `events.terrain.lesson.generation.failed` (chunk_id, reason, timestamp)
+   - Retry logic: 2 retries with incremental backoff before giving up
+   - Each event includes full NATS envelope structure (event_id, source, timestamp, schema_version)
+
+2. **LessonHandler (bot_army_terrain v0.1.2)**
+   - `generate_lesson/3`: Orchestrates lesson generation flow
+   - `build_lesson_prompt/2`: Creates detailed educator prompt (concepts, examples, practices, misconceptions)
+   - `call_llm/3`: Sends request to llm.prompt.submit via NATS
+   - `send_llm_request/1`: Publishes LLM request envelope with source_domain tracking
+   - Phase 1: Returns demo lessons while LLM integration is in progress
+   - Phase 2 (upcoming): Parse LLM responses and persist to database with pgvector embeddings
+
+3. **RequestHandler Update (bot_army_terrain v0.1.2)**
+   - Added subscription: "terrain.lesson.generation.request"
+   - `handle_request("terrain.lesson.generation.request", msg)`: Queues lesson via LessonGenerationWorker
+   - Returns JSON: `{ok: true, queued: true, chunk_id, message: "Lesson generation queued"}`
+   - Validates required fields (chunk_id, chunk_title, chunk_content) before queuing
+
+4. **NATS Client Methods (terrain-tui)**
+   - `RequestLessonGeneration(chunkID, title, content)`: Calls terrain.lesson.generation.request (request/reply)
+   - `SubscribeLessonEvents(callback)`: Subscribes to events.terrain.lesson.generation.> (wildcard)
+   - Callback signature: `func(eventType, chunkID, status string, progress float64, message string)`
+   - Allows TUI to react to any lesson event for any chunk
+
+5. **Dojo Screen Integration (terrain-tui)**
+   - `switchToDojo()`: Now subscribes to lesson events when entering dojo mode
+   - `getDojoLesson()`:
+     - Tries to load from file-based lessons first
+     - If missing AND NATS available: Triggers `RequestLessonGeneration()` async
+     - Returns demo lesson while generating (with "(Generating...)" indicator)
+     - Prevents duplicate requests via `generatingLessons` map tracking
+   - `subscribeLessonEvents()`: Handles all lesson event types:
+     - **started**: Log generation start
+     - **progress**: Show percent complete + current step in status bar (e.g., "Generating lesson: 75% (saving)")
+     - **completed**: Reload lessons from files, refresh dojo display if viewing that chunk, clear generation flag
+     - **failed**: Show error in status bar, clear generation flag
+   - Status bar updates in real-time as events arrive
+
+**Observability Features:**
+- Users see "Generating lesson for chunk_id..." when request sent
+- Progress updates: "Generating lesson: 25% (generating)" → "50% (saving)" → "completed"
+- Failed lessons show "Lesson generation failed for chunk_id" message
+- Generation status persists in UI (`(Generating...)` text) until completion
+
+**Testing:** All tests passing (bot_army_terrain compile-check ✅, terrain-tui compile-check ✅)
+
+**Releases:**
+- bot_army_terrain v0.1.2 — Added LessonGenerationWorker + LessonHandler + RequestHandler updates
+- terrain-tui — Updated with dojo integration (RequestLessonGeneration + SubscribeLessonEvents + observable progress)
+
+**Impact:** Users no longer wait for lesson generation before continuing. System generates in background while dojo view shows demo content + progress indicator. When ready, lesson auto-loads. This unblocks phase 2 work (persistent lessons in DB with semantic search).
 
 ---
 
