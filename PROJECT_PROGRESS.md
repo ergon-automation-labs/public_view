@@ -2446,3 +2446,157 @@ bot_army_fitness: 9baac7a Implement fitness goal store, progress tracking, and f
 
 
 ---
+
+## GenBot Markdown Template — Phase 1 Complete (2026-03-26)
+
+### Overview
+
+Implemented a standalone, reusable LLM bot harness where skills and jobs are defined entirely in markdown files. Developers with no Elixir experience can now author LLM-driven bots by writing YAML-fronted markdown.
+
+**Status:** ✅ Phase 1 Complete — 12 implementation steps, 32 tests passing, full compilation successful
+
+### Architecture
+
+- **GenBot Macro** — Generates GenServer that loads skills, subscribes to NATS triggers, routes messages, publishes health status
+- **SkillDefinition** — Plain struct for skill/job metadata from markdown YAML frontmatter
+- **SkillLoader** — Parses `.md` files, extracts YAML, builds skill list
+- **SkillExecutor** — Renders templates with `{{ payload.* }}` substitution, executes skills
+- **Publisher** — Publishes LLM requests + health status with standard NATS envelope
+- **HealthReporter** — Publishes health status every 30 seconds
+- **Application** — Minimal supervisor (developer adds bot instance)
+
+### Schemas & NATS Patterns
+
+Implemented `bot_army_schemas_markdown_template/` with three schema validators:
+
+1. **LlmRequest** (`llm.prompt.submit`)
+   - Fire-and-forget pattern: bot publishes prompt request
+   - Subject: `llm.prompt.submit` (fixed, no bot_id)
+   - Includes rendered skill template as LLM prompt
+
+2. **LlmCompletion** (`events.llm.completion.{bot_id}.{skill_name}`)
+   - **Async response** from LLM service
+   - GenBot subscribes to `events.llm.completion.{bot_id}.>` wildcard
+   - Bot publishes downstream to `events.{bot_id}.skill.completed`
+
+3. **HealthStatus** (`bot.army.health.{bot_id}`)
+   - Published every 30 seconds
+   - Tracks skills_loaded count for validation
+
+### Auto-Generated bot_id
+
+`setup_new_bot.sh` now:
+- Extracts bot_id from app_name (`bot_army_mybot` → `mybot`)
+- Auto-generates schemas app name (`bot_army_schemas_mybot`)
+- Creates both directories with customized modules
+- Documents request/response LLM communication pattern in schemas
+
+### Testing & Verification
+
+| Module | Tests | Status |
+|--------|-------|--------|
+| SkillDefinition | 2 | ✅ passing |
+| SkillLoader | 7 | ✅ passing |
+| SkillExecutor | 10 | ✅ passing |
+| Publisher | 5 | ✅ passing |
+| HealthReporter | 4 | ✅ passing |
+| GenBot | 4 | ✅ passing |
+| **Total** | **32** | **✅ all passing** |
+
+**Compilation:** ✅ Successful (zero errors, warnings from external deps only)
+
+### Implementation Checklist
+
+- ✅ Step 1: Scaffold (mix.exs, configs, directories)
+- ✅ Step 2: SkillDefinition struct
+- ✅ Step 3: SkillLoader (markdown parser)
+- ✅ Step 4: Publisher (NATS envelope + LLM submit)
+- ✅ Step 5: SkillExecutor (template rendering)
+- ✅ Step 6: HealthReporter (heartbeat)
+- ✅ Step 7: GenBot macro (core GenServer)
+- ✅ Step 8: Application.ex (supervisor with developer guidance)
+- ✅ Step 9: Example markdown files (skills + jobs)
+- ✅ Step 10: Test support (fixtures, test_helper)
+- ✅ Step 11: DevOps files (Makefile, Jenkinsfile, pre-push hook)
+- ✅ Step 12: setup_new_bot.sh (clone script with auto bot_id + schemas)
+- ✅ Step 13: NATS Schemas (LlmRequest, LlmCompletion, HealthStatus)
+
+### Code Artifacts
+
+**Core Modules (7 files, 400+ LOC):**
+```
+lib/bot_army_markdown_template/
+├── skill_definition.ex       (30 LOC, struct + type)
+├── skill_loader.ex           (120 LOC, YAML parser, no external deps)
+├── skill_executor.ex         (45 LOC, template rendering, robust path resolution)
+├── publisher.ex              (60 LOC, envelope building, NATS publishing)
+├── health_reporter.ex        (50 LOC, health status publication)
+├── gen_bot.ex                (140 LOC, macro-based GenServer)
+└── application.ex            (40 LOC, supervisor with guidance)
+```
+
+**Schema Validators (3 files, 200+ LOC):**
+```
+bot_army_schemas_markdown_template/lib/
+├── llm_request.ex            (70 LOC, validates llm.prompt.submit)
+├── llm_completion.ex         (60 LOC, validates events.llm.completion.*)
+├── health_status.ex          (50 LOC, validates bot.army.health.*)
+└── bot_army_schemas_markdown_template.ex  (Main validator router)
+```
+
+**DevOps Automation:**
+- Makefile: 70 LOC (test, credo, dialyzer, release, publish)
+- Jenkinsfile: 80 LOC (GitHub release download, deploy via launchctl)
+- pre-push hook: 40 LOC (compile → test → release → publish pipeline)
+- setup_new_bot.sh: 200 LOC (template clone, auto bot_id, schema generation)
+
+### Developer Experience
+
+New bot creation in 3 commands:
+```bash
+./setup_new_bot.sh bot_army_mybot mybot_bot mybot "My Bot"
+cd ../bot_army_mybot && make setup
+# Edit skills/*.md, add bot to application.ex, git push
+```
+
+Skills defined as 15-line markdown files (no Elixir code):
+```markdown
+---
+name: summarize
+description: Summarizes content into key points
+---
+You are an expert summarizer...
+Summarize: {{ payload.content }}
+```
+
+### Phase 2 Features (Blocked Until Needed)
+
+- Job auto-scheduling with cron (schedule field already in markdown YAML)
+- Wildcard trigger matching (currently exact match only)
+- AGE (memory/personality) context modules
+- Cross-bot skill sharing patterns
+- Ecto persistence (optional, developer adds as needed)
+
+### Key Design Decisions
+
+1. **Markdown-First** — Non-engineers can author bots without touching Elixir
+2. **No Built-In DB** — Stateless LLM dispatcher (developers add Repo if needed)
+3. **Fire-and-Forget LLM** — Async request/response via NATS subscriptions
+4. **Schema-Per-Bot** — Each bot generates its own `bot_army_schemas_*` for validation
+5. **Auto bot_id** — Derived from app_name, eliminates configuration mismatch
+6. **Pre-push Automation** — Version bump → compile → test → release → GitHub → Jenkins
+7. **No External YAML Lib** — Custom YAML parser for predictable frontmatter
+
+### Commits
+
+- 160493b "GenBot Markdown Template: Phase 1 complete with schemas and auto-generated bot_id"
+
+### Next Steps
+
+1. **Create first markdown-driven bot** using setup_new_bot.sh
+2. **Write 5-10 example skills** to validate template usability
+3. **Test end-to-end** — skill triggering → LLM request → completion handling
+4. **Gather feedback** from non-Elixir bot authors
+5. **Phase 2** — Cron scheduling, wildcard matching, AGE context modules
+
+---
