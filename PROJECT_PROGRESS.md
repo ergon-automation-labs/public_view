@@ -60,6 +60,49 @@ Vector Search   pgvector (1536-dim embeddings, IVFFlat index)
 
 ## Detailed Project Status
 
+### 🎯 Session 11: Infrastructure Debugging + Portfolio Polish (2026-03-26)
+
+**GenBot Template Phase 1 + Infrastructure Stabilization** — Completed markdown-first bot template with 32 tests, updated GitHub portfolio presence, debugged and fixed PostgreSQL connectivity.
+
+**Changes Made:**
+
+1. **GenBot Markdown Template Phase 1 Complete**
+   - Markdown-only skills and jobs (no Elixir code required)
+   - Auto-generated bot_id from app_name (bot_army_mybot → mybot)
+   - NATS schema validators for LLM communication (llm_request, llm_completion, health_status)
+   - Fire-and-forget LLM pattern: skill → llm.prompt.submit → async completion handler
+   - 32 tests passing: SkillDefinition, SkillLoader, SkillExecutor, Publisher, HealthReporter, GenBot macro
+   - setup_new_bot.sh template generator with automatic bot_id extraction and schema repo creation
+   - Commit: 160493b "GenBot Markdown Template: Phase 1 complete with schemas and auto-generated bot_id"
+
+2. **GitHub Portfolio & Public Presence (Completed)**
+   - Updated ergon-automation-labs (.github) and the-great-abby profiles with public resource links
+   - Added 8+ standardized GitHub topics to all public repos (elixir, nats, bot-army, project-identity, etc.)
+   - Linked public distributions: portable_job_applications, portable_job_applications_tui, portable_llm_proxy
+   - Added public_view (metrics dashboard) and YouTube channel (@AbbyMalson3)
+   - Updated "55+ repo" count and cleaned up portfolio directory references
+
+3. **PostgreSQL Port-Forward Debugging & Fix (Infrastructure)**
+   - **Issue Identified**: launchctl service `com.botarmy.postgres-portforward` failed to load (2026-03-25)
+   - **Root Cause**: kubectl port-forward script couldn't write to `/var/log/bot_army/postgres-portforward.log`
+     - Log directory owned by root with mode 755 (not writable by user `abby`)
+     - Script runs as user `abby` via launchd → permission denied → service failed to start
+   - **Fix Applied**: Updated Salt state `salt/air/kubernetes_portforwards.sls`
+     - Added `log_dir_permissions` state: mode 775, group bot_army
+     - Service now loads and stays running with proper log rotation
+   - **Verification**:
+     - Port 35432 now responsive (kubectl port-forward process running)
+     - PostgreSQL connections working: `psql -h localhost -p 35432` ✓
+     - All 8 Salt states applied successfully (4 changes, 0 failures)
+   - **Comparison**: Evaluated NodePort 30003 vs port-forward wrapper 35432
+     - NodePort: Kubernetes-native, instant, but "randomly died" historically
+     - Port-forward: Launchd-managed, reliable, easy to debug (now fixed)
+     - Decision: Port-forward chosen for reliability once permission issue resolved
+
+**Impact:** All bots can now connect to PostgreSQL without errors. Infrastructure is stable for v0.6.2+ deployments requiring database access.
+
+---
+
 ### 🎯 Session 6: Safety Classifier + Local Queue Management (2026-03-24)
 
 **Artifact Generation Pipeline Stability** — Implemented safety classifier integration with Ollama queue visibility.
