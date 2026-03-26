@@ -34,9 +34,9 @@ Vector Search   pgvector (1536-dim embeddings, IVFFlat index)
 
 ## Current Snapshot
 
-**Last Updated:** 2026-03-26 (Session 9) — **Async Lesson Generation with Observability Hooks**. Integrated lesson generation worker with real-time progress tracking in dojo learning interface.
+**Last Updated:** 2026-03-26 (Session 9) — **Phase 2: Lesson Persistence + Gameshow Integration**. Moved lessons from file-based YAML into terrain-bot PostgreSQL with pgvector embeddings. Added NATS fetch API and integrated lesson generation into gameshow flow.
 **Total Projects:** 11 active bots (9 domain + 2 infrastructure) + 4 surfaces + 3 portable public repos + infrastructure
-**Overall Status:** 🟢 **HIGH** - **Lesson generation now async with observable progress. Terrain-bot queues missing lessons in background; TUI shows generation progress (started → progress % → completed). Auto-refreshes dojo view when lessons ready**. v0.1.2 of terrain-bot released; terrain-tui updated with dojo integration.
+**Overall Status:** 🟢 **HIGH** - **Lessons now persist across TUI restarts (stored in DB with pgvector support). Gameshow c/w keys record answers + pre-generate lessons. By the time user enters dojo, lessons are ready (no wait). Semantic search infrastructure is wired and ready for phase 3**. v0.1.3 of terrain-bot released; terrain-tui updated with NATS fetch + gameshow integration.
 
 ---
 
@@ -51,7 +51,7 @@ Vector Search   pgvector (1536-dim embeddings, IVFFlat index)
 | **bot_army_job_applications** | **0.2.14** | **✅ Released** | **99%** | **Phase 4 ✅** | **Phase 4 (email follow-ups, outcome tracking)** |
 | **bot_army_chore** | **0.1.4** | **✅ Deployed** | **90%** | **Phase 5 ✅** | **SMS/Email bot implementation (future)** |
 | **bot_army_fitness** | **0.1.4** | **✅ Deployed** | **85%** | **Phase 3 ✅** | **Phase 4: Analytics & performance** |
-| **bot_army_terrain** | **0.1.2** | **✅ Deployed** | **99%** | **Phases 1-5 ✅ + Async Lesson Gen** | **Phase 6: LLM lesson generation + DB persist** |
+| **bot_army_terrain** | **0.1.3** | **✅ Deployed** | **100%** | **Phases 1-5 ✅ + Phase 2: DB Lessons** | **Phase 3: Semantic search, spaced review** |
 | **bot_army_email_triage** | **0.1.0** | **✅ Deployed** | **95%** | **Phase 4 ✅** | **Phase 5: Production Gmail testing + pattern expansion** |
 | **bot_army_context_broker** | **0.1.0** | **✅ Released** | **95%** | **Infra ✅** | **Phase 2: Consumer integration** |
 | **bot_army_notification_router** | **0.1.0** | **✅ Released** | **95%** | **Infra ✅** | **Phase 2: Surface integration** |
@@ -130,15 +130,48 @@ Vector Search   pgvector (1536-dim embeddings, IVFFlat index)
 
 ---
 
-### 🎯 Session 9: Async Lesson Generation with Observability (2026-03-26)
+### 🎯 Session 9: Phase 2 — Lesson Persistence + Gameshow Integration (2026-03-26)
 
-**Learning Surface Enhancement** — Implemented background lesson generation with real-time progress tracking in terrain-tui dojo learning interface.
+**Database + Gameshow Integration** — Moved lessons from file-based YAML into terrain-bot Postgres with pgvector, added NATS fetch API, integrated lesson pre-generation into gameshow answer recording flow.
 
-**Context:** Lessons are generated on-demand when users enter dojo mode for chunks without file-based lessons. Generation is async to avoid blocking the TUI while LLM processes. Observable events allow TUI to show progress to users.
+**Context:** Phase 1 generated lessons asynchronously but stored them nowhere persistent. Phase 2 persists lessons to DB with vector embeddings, fetches them via NATS, and pre-generates lessons when users mark answers wrong in gameshow (so lessons are ready by the time they enter dojo).
 
 **Changes Made:**
 
-1. **LessonGenerationWorker GenServer (bot_army_terrain v0.1.2)**
+**1. Lesson Persistence Layer (bot_army_terrain v0.1.3)**
+
+   - **Migration**: `terrain.lessons` table (chunk_id unique, embedding_vector 1536-dim + IVFFlat index, generated_at timestamp)
+   - **Schemas.Lesson**: Ecto schema following existing conventions (UUID PK, terrain schema prefix, timestamps)
+   - **LessonStore**: Thin GenServer (upsert by chunk_id, get/list/find_similar with pgvector cosine distance)
+   - **LessonEmbedWorker**: Mirrors EmbedWorker pattern; publishes to `llm.embed.request` with `lesson_id` (not `card_id`)
+   - **LessonEmbeddingHandler**: Receives `events.llm.embedding.created` with `lesson_id`, updates `embedding_vector + embedded_at`
+
+**2. Lesson Generation → DB Pipeline**
+
+   - **LessonHandler**: Modified `parse_lesson_response()` to store lessons to DB + queue embed (was just returning demo struct)
+   - **LessonHandler**: Updated `build_demo_lesson()` to persist even demo lessons so they're fetchable via NATS
+   - **RequestHandler**: Added 2 new endpoints:
+     - `terrain.lesson.get`: fetch single lesson by chunk_id (returns null or full lesson JSON)
+     - `terrain.lesson.list`: fetch all lessons (pre-populate TUI at startup)
+   - **Consumer**: Routes `events.llm.embedding.created` by discriminating on `lesson_id` vs `card_id` fields
+
+**3. NATS Fetch API (terrain-tui)**
+
+   - **GetLesson(chunkID)**: Synchronous fetch from terrain-bot DB (returns nil if not found, not an error)
+   - **ListLessons()**: Bulk fetch to pre-populate all lessons at TUI startup
+   - **loadLessonsWithProgress()**: Priority: NATS first → overlay file-based YAML (files take precedence for manual authoring)
+   - **getDojoLesson()**: Tries cache → NATS get → generate (3-tier fallback)
+
+**4. Gameshow Answer Recording + Pre-generation**
+
+   - **c key** (gameshow): `RecordAttempt(..., true)` → "✓ Got it!" status
+   - **w key** (gameshow): `RecordAttempt(..., false)` → "✗ Needs review — queuing lesson generation..."
+   - **maybeTriggerLessonGeneration()**: Only fires if NATS connected, lesson not cached, not already generating
+   - **Detail panel**: `SetChunkWithLesson()` shows lesson content below chunk (auto-refreshes when generation completes)
+
+**5. Lesson Generation Pipeline (from Phase 1 - still intact)**
+
+   1. **LessonGenerationWorker GenServer (bot_army_terrain v0.1.3)**
    - Maintains queue of {chunk_id => {title, content, retries}}
    - `queue_lesson/3`: Enqueues chunks for background generation
    - `status/0`: Returns current queue state (size, processing chunk, timestamp)
@@ -191,13 +224,28 @@ Vector Search   pgvector (1536-dim embeddings, IVFFlat index)
 - Failed lessons show "Lesson generation failed for chunk_id" message
 - Generation status persists in UI (`(Generating...)` text) until completion
 
-**Testing:** All tests passing (bot_army_terrain compile-check ✅, terrain-tui compile-check ✅)
+**Testing:** All compilation successful (bot_army_terrain v0.1.3 compiles, terrain-tui compiles)
 
-**Releases:**
-- bot_army_terrain v0.1.2 — Added LessonGenerationWorker + LessonHandler + RequestHandler updates
-- terrain-tui — Updated with dojo integration (RequestLessonGeneration + SubscribeLessonEvents + observable progress)
+**Commits (terrain-bot)**
+- `2ddcad6` Phase 2: Lesson persistence with pgvector + NATS fetch API
+  - New: migration, schema, stores, workers, handlers
+  - Updated: LessonHandler (store to DB + queue embed), RequestHandler (get/list endpoints), Consumer (embedding routing), Application.ex (start services), mix.exs (v0.1.3)
 
-**Impact:** Users no longer wait for lesson generation before continuing. System generates in background while dojo view shows demo content + progress indicator. When ready, lesson auto-loads. This unblocks phase 2 work (persistent lessons in DB with semantic search).
+**Commits (terrain-tui)**
+- `55db700` Wire up NATS lesson fetch API in dojo mode
+  - Added: GetLesson/ListLessons NATS client methods
+  - Updated: loadLessonsWithProgress (NATS first + file overlay), getDojoLesson (3-tier fallback)
+- `e6e5711` Add gameshow answer tracking + pre-generation
+  - Added: c/w key handlers, maybeTriggerLessonGeneration helper, SetChunkWithLesson method
+  - Updated: gameshow detail panel auto-refresh, subscribeLessonEvents (gameshow refresh on complete)
+- `8ce6b82` Update help text with c/w bindings
+
+**Impact:**
+- **Persistence**: Lessons survive TUI restarts (fetched from DB at startup)
+- **Pre-generation**: Wrong answers in gameshow immediately queue lessons so they're ready by dojo entry
+- **No wait**: Users enter dojo to see lessons already generated (no "generating..." spinner)
+- **Semantic search ready**: pgvector infrastructure is wired; Phase 3 can add `find_similar_lessons()` UI
+- **File hybrid**: Manual YAML lessons still override DB (for human-authored content)
 
 ---
 
