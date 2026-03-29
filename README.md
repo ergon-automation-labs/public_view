@@ -6,17 +6,35 @@ It exists because the work is worth showing, and because shipping in public is m
 
 ---
 
-## What You're Looking At
+## Current Status
 
-**[PROJECT_PROGRESS.md](./PROJECT_PROGRESS.md)** is a running engineering log — updated per session, per release, and per milestone. It tracks:
+### 🤖 Bots
 
-- Active bot status, version, and completion percentage
-- What shipped in each session (with test counts and NATS subjects)
-- What's pending and why
-- Infrastructure decisions and their reasoning
-- Blockers, risks, and how they were resolved
+| Bot | Version | Status |
+|---|---|---|
+| [advocacy](./bots/bot_army_advocacy.md) | `0.1.2` | ✅ |
+| [chore](./bots/bot_army_chore.md) | `0.1.4` | ✅ |
+| [context uroker](./bots/bot_army_context_broker.md) | `0.1.0` | ✅ |
+| [email triage](./bots/bot_army_email_triage.md) | `0.1.0` | ✅ |
+| [fitness](./bots/bot_army_fitness.md) | `0.1.4` | ✅ |
+| [gtd](./bots/bot_army_gtd.md) | `0.2.0` | ✅ |
+| [jou applications](./bots/bot_army_job_applications.md) | `0.2.14` | ✅ |
+| [llm](./bots/bot_army_llm.md) | `0.5.7+` | ✅ |
+| [notification router](./bots/bot_army_notification_router.md) | `0.1.0` | ✅ |
+| [sre](./bots/bot_army_sre.md) | `0.1.0` | ✅ |
+| [terrain](./bots/bot_army_terrain.md) | `0.1.22` | ✅ |
 
-It reads like an internal engineering document because it is one. That's intentional.
+### 🖥️ Surfaces
+
+| Surface | Type | Version |
+|---|---|---|
+| [command center tui](./surfaces/command-center-tui.md) | Go TUI (tview) | unknown |
+| [gtd tui](./surfaces/gtd-tui.md) | Go TUI (tview) | unknown |
+| [jou applications tui](./surfaces/job-applications-tui.md) | Go TUI (tview) | unknown |
+| [jou_applications_liveview](./surfaces/job_applications_liveview.md) | Phoenix LiveView |  |
+| [k9s style template](./surfaces/k9s-style-template.md) | Go TUI (tview) | unknown |
+| [sre tui](./surfaces/sre-tui.md) | Go TUI (tview) | unknown |
+| [terrain tui](./surfaces/terrain-tui.md) | Go TUI (tview) | unknown |
 
 ---
 
@@ -37,29 +55,11 @@ Every bot communicates via NATS. Every service boundary is a JSON Schema contrac
 
 ---
 
-## Current Status (as of March 2026)
+## Structure
 
-| Bot | Version | Status |
-|---|---|---|
-| bot_army_llm | 0.6.2 | ✅ Production |
-| bot_army_gtd | 0.2.0 | ✅ Production |
-| bot_army_advocacy | 0.1.2 | ✅ Production |
-| bot_army_job_applications | 0.2.14 | ✅ Production |
-| bot_army_chore | 0.1.4 | ✅ Production |
-| bot_army_fitness | 0.1.4 | ✅ Production |
-| bot_army_terrain | 0.1.2 | ✅ Production |
-| bot_army_email_triage | 0.1.0 | ✅ Production |
-| bot_army_sre | 0.1.0 | 🟡 Phase 3 |
-| bot_army_context_broker | 0.1.0 | ✅ Released |
-| bot_army_notification_router | 0.1.0 | ✅ Released |
-
----
-
-## How This Gets Updated
-
-Progress is exported here at the end of meaningful sessions — new releases, completed phases, resolved blockers. It's maintained with AI assistance (Claude) and reflects real work, not aspirational roadmaps.
-
-The goal is automation: eventually a progress bot watches commits and NATS events and pushes updates here directly. For now, it's human-in-the-loop.
+- **bots/** — Individual progress reports for each bot service
+- **surfaces/** — Progress reports for terminal TUI and web surfaces
+- **[Main Repository](https://github.com/ergon-automation-labs/elixir_bots)** — Source code and detailed session notes
 
 ---
 
