@@ -12,29 +12,29 @@ It exists because the work is worth showing, and because shipping in public is m
 
 | Bot | Version | Status |
 |---|---|---|
-| [advocacy](./bots/bot_army_advocacy.md) | `0.1.2` | ✅ |
-| [chore](./bots/bot_army_chore.md) | `0.1.4` | ✅ |
-| [context uroker](./bots/bot_army_context_broker.md) | `0.1.0` | ✅ |
-| [email triage](./bots/bot_army_email_triage.md) | `0.1.0` | ✅ |
-| [fitness](./bots/bot_army_fitness.md) | `0.1.4` | ✅ |
-| [gtd](./bots/bot_army_gtd.md) | `0.2.0` | ✅ |
-| [jou applications](./bots/bot_army_job_applications.md) | `0.2.14` | ✅ |
-| [llm](./bots/bot_army_llm.md) | `0.5.7+` | ✅ |
-| [notification router](./bots/bot_army_notification_router.md) | `0.1.0` | ✅ |
-| [sre](./bots/bot_army_sre.md) | `0.1.0` | ✅ |
-| [terrain](./bots/bot_army_terrain.md) | `0.1.22` | ✅ |
+| [Advocacy](./bots/bot_army_advocacy.md) | `0.1.2` | ✅ |
+| [Chore](./bots/bot_army_chore.md) | `0.1.4` | ✅ |
+| [Context Broker](./bots/bot_army_context_broker.md) | `0.1.0` | ✅ |
+| [Email Triage](./bots/bot_army_email_triage.md) | `0.1.0` | ✅ |
+| [Fitness](./bots/bot_army_fitness.md) | `0.1.4` | ✅ |
+| [Gtd](./bots/bot_army_gtd.md) | `0.2.0` | ✅ |
+| [Job Applications](./bots/bot_army_job_applications.md) | `0.2.14` | ✅ |
+| [Llm](./bots/bot_army_llm.md) | `0.5.7+` | ✅ |
+| [Notification Router](./bots/bot_army_notification_router.md) | `0.1.0` | ✅ |
+| [Sre](./bots/bot_army_sre.md) | `0.1.0` | ✅ |
+| [Terrain](./bots/bot_army_terrain.md) | `0.1.22` | ✅ |
 
 ### 🖥️ Surfaces
 
 | Surface | Type | Version |
 |---|---|---|
-| [command center tui](./surfaces/command-center-tui.md) | Go TUI (tview) | unknown |
-| [gtd tui](./surfaces/gtd-tui.md) | Go TUI (tview) | unknown |
-| [jou applications tui](./surfaces/job-applications-tui.md) | Go TUI (tview) | unknown |
-| [jou_applications_liveview](./surfaces/job_applications_liveview.md) | Phoenix LiveView |  |
-| [k9s style template](./surfaces/k9s-style-template.md) | Go TUI (tview) | unknown |
-| [sre tui](./surfaces/sre-tui.md) | Go TUI (tview) | unknown |
-| [terrain tui](./surfaces/terrain-tui.md) | Go TUI (tview) | unknown |
+| [Command Center Tui](./surfaces/command-center-tui.md) | Go TUI (tview) | unknown |
+| [Gtd Tui](./surfaces/gtd-tui.md) | Go TUI (tview) | unknown |
+| [Job Applications Tui](./surfaces/job-applications-tui.md) | Go TUI (tview) | unknown |
+| [Job_applications_liveview](./surfaces/job_applications_liveview.md) | Phoenix LiveView |  |
+| [K9s Style Template](./surfaces/k9s-style-template.md) | Go TUI (tview) | unknown |
+| [Sre Tui](./surfaces/sre-tui.md) | Go TUI (tview) | unknown |
+| [Terrain Tui](./surfaces/terrain-tui.md) | Go TUI (tview) | unknown |
 
 ---
 
