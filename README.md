@@ -21,7 +21,7 @@ It exists because the work is worth showing, and because shipping in public is m
 | [Job Applications](./bots/bot_army_job_applications.md) | `0.2.14` | ✅ |
 | [Llm](./bots/bot_army_llm.md) | `0.5.7+` | ✅ |
 | [Notification Router](./bots/bot_army_notification_router.md) | `0.1.0` | ✅ |
-| [Sre](./bots/bot_army_sre.md) | `0.1.0` | ✅ |
+| [Sre](./bots/bot_army_sre.md) | `0.3.0` | ✅ |
 | [Terrain](./bots/bot_army_terrain.md) | `0.1.22` | ✅ |
 
 ### 🖥️ Surfaces

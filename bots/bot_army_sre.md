@@ -1,13 +1,13 @@
 # Bot Army — bot_army_sre
 
-**Version:** `0.1.0`
+**Version:** `0.3.0`
 **Status:** ✅
-**Completion:** 55%
-**Phase:** Runbooks
+**Completion:** 100%
+**Phase:** Phase 2 Multitenancy
 
 ## Next Priority
 
-Phase 4 (persistence, auto-trigger)
+Phase 3: Investigations + GitHub Sync
 
 ---
 
