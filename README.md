@@ -28,6 +28,7 @@ It exists because the work is worth showing, and because shipping in public is m
 
 | Surface | Type | Version |
 |---|---|---|
+| [Bot_army_lib Shared_tui](./surfaces/bot_army_lib-shared_tui.md) | Go TUI (tview) | unknown |
 | [Command Center Tui](./surfaces/command-center-tui.md) | Go TUI (tview) | unknown |
 | [Gtd Tui](./surfaces/gtd-tui.md) | Go TUI (tview) | unknown |
 | [Job_applications_liveview](./surfaces/job_applications_liveview.md) | Phoenix LiveView |  |
