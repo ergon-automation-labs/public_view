@@ -31,8 +31,8 @@ It exists because the work is worth showing, and because shipping in public is m
 | [Bot_army_lib Shared_tui](./surfaces/bot_army_lib-shared_tui.md) | Go TUI (tview) | unknown |
 | [Command Center Tui](./surfaces/command-center-tui.md) | Go TUI (tview) | unknown |
 | [Gtd Tui](./surfaces/gtd-tui.md) | Go TUI (tview) | unknown |
-| [Job Applications Tui](./surfaces/job-applications-tui.md) | Go TUI (tview) | unknown |
 | [Job_applications_liveview](./surfaces/job_applications_liveview.md) | Phoenix LiveView |  |
+| [Job Applications Tui](./surfaces/job-applications-tui.md) | Go TUI (tview) | unknown |
 | [K9s Style Template](./surfaces/k9s-style-template.md) | Go TUI (tview) | unknown |
 | [Sre Tui](./surfaces/sre-tui.md) | Go TUI (tview) | unknown |
 | [Terrain Tui](./surfaces/terrain-tui.md) | Go TUI (tview) | unknown |
